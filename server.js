@@ -14,16 +14,20 @@ const awbData = {
   shipper: {
     name: "ONEGLOBE LOGISTICS PTE. LTD.",
     address:
-      "115 Airport Cargo Road, #02-09, Cargo Agents Building C, SINGAPORE\nSingapore 815466",
+      "115 Airport Cargo Road , #02-09,  Cargo Agents Building C , SINGAPORE\nSingapore 815466",
     account: "", // Empty in PDF
   },
-  consignee: {
-    name: "GOOCHU GLOBAL LOGISTICS PRIVATE LIMITED",
-    address:
-      "A-416, 2ND FLOOR, ROAD NO. 04, STREET NO. 10, MAHIPALPUR EXTN.\nCAAR NO. AAHCG1358H-CN-INDEL4, 110037, INDIA",
-    telephone: "+91 7987755773",
-    account: "", // Empty in PDF
-  },
+consignee: {
+  name: "GOOCHU GLOBAL LOGISTICS PRIVATE LIMITED",
+  address:
+    "A-416, 2ND FLOOR, ROAD NO. 04, STREET NO. 10\n" +
+    "MAHIPALPUR EXTN. CAAR NO. AAHCG1358H-CN-INDEL4\n" +
+    "110037\n" +
+    "INDIA",
+  telephone: "+91 7987755773",
+  account: "",
+},
+
 
   agent: {
     nameCity: "ONEGLOBE LOGISTICS PTE. LTD.\nSINGAPORE",
@@ -98,12 +102,12 @@ app.get("/generate-pdf", async (req, res) => {
     const footerY = 285.0;
 
 
-    // small helpers ------------------------------------------------------
+    // small helpers of CONSIGNEE'S NAME & ADDRESS sub content ------------------------------------------------------
     const drawMultilineInBox = (x, y, boxW, boxH, text, fontSize = 6, padding = 1) => {
       doc.setFontSize(fontSize);
       const maxWidth = boxW - padding * 2;
       const lines = doc.splitTextToSize(text, maxWidth);
-      const lineHeight = fontSize * 0.7;
+      const lineHeight = fontSize * 0.38;
       // fit lines into boxH - if too many, truncate with ellipsis
       const maxLines = Math.floor((boxH - padding * 2) / lineHeight);
       const toDraw = lines.slice(0, maxLines);
@@ -119,32 +123,50 @@ app.get("/generate-pdf", async (req, res) => {
       });
     };
 
-    // small boxed header with an account area on right
-    const drawHeaderBox = (x, y, width, height, label, content, accountLabel, account) => {
-      doc.setLineWidth(0.4);
-      doc.rect(x, y, width, height, "S");
-      const headerH = 7.0;
-      doc.line(x, y, x + width, y);
+    // small boxed header with an account area on right (CONSIGNEE'S NAME & ADDRESS)
+const drawHeaderBox = (
+  x,
+  y,
+  width,
+  height,
+  label,
+  content,
+  accountLabel,
+  account,
+  fontSizeOverride = 8   // NEW optional font size
+) => {
+  doc.setLineWidth(0.4);
+  doc.rect(x, y, width, height, "S");
+  const headerH = 7.0;
 
+  doc.setFontSize(6);
+  doc.text(label, x + 1.2, y + 4.2);
 
-      doc.setFontSize(6);
-      doc.text(label, x + 1.2, y + 4.2);
+  const accountBoxW = 48.0;
+  const accountX = x + width - accountBoxW;
 
-      // account small grey box right side
-      const accountBoxW = 48.0;
-      const accountX = x + width - accountBoxW;
-      doc.setFillColor(235, 235, 235);
-      doc.rect(accountX, y, accountBoxW, headerH, "F");
-      doc.rect(accountX, y, accountBoxW, headerH, "S");  // draw border around grey box
-      doc.setFontSize(5);
-      doc.text(accountLabel, accountX + 8.5, y + 2.5);
-      doc.setFontSize(8);
-      doc.text(account, accountX + 8.5, y + 5.0);
+  doc.setFillColor(235, 235, 235);
+  doc.rect(accountX, y, accountBoxW, headerH, "F");
+  doc.rect(accountX, y, accountBoxW, headerH, "S");
 
-      // content area
-      drawMultilineInBox(x + 1.2, y + headerH - 5, width - 2.4, height - headerH - 3, content, 8, 1.2);
-      doc.setFontSize(6);
-    };
+  doc.setFontSize(5);
+  doc.text(accountLabel, accountX + 8.5, y + 2.5);
+
+  doc.setFontSize(8);
+  doc.text(account, accountX + 8.5, y + 5.0);
+
+  // ---------- CONTENT AREA (UPDATED) ----------(CONSIGNEE'S NAME & ADDRESS conent)
+  drawMultilineInBox(
+    x + 1.2,
+    y + headerH - 4,
+    width - 2.4,
+    height - headerH - 3,
+    content,
+    fontSizeOverride, // use dynamic font size
+    0.6               // tighter line spacing to fit more lines
+  );
+};
+
 
     // styling defaults
     doc.setFont("helvetica");
@@ -155,7 +177,8 @@ app.get("/generate-pdf", async (req, res) => {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     // left small AWB line - exactly as in PDF
-    doc.text(`${awbData.awbPrefix} SIN | ${awbData.awbNumber}`, marginLeft, currentY - 2);
+    doc.text(`${awbData.awbPrefix} | SIN | ${awbData.awbNumber}`, marginLeft, currentY - 2);
+
     // right AWB big
     doc.setFontSize(10);
     doc.text(`${awbData.awbPrefix} - ${awbData.awbNumber}`, marginLeft + 163, currentY - 2);
@@ -185,7 +208,7 @@ doc.setFont("helvetica", "normal");
 
     // ------------------ ROW 1: SHIPPER & CONDITIONS ------------------
     const rowHeight1 = 25.0;
-    drawHeaderBox(marginLeft, currentY, leftColWidth, rowHeight1, "SHIPPER'S NAME & ADDRESS", awbData.shipper.name + "\n" + awbData.shipper.address, "SHIPPER'S ACCOUNT NUMBER", awbData.shipper.account || "");
+    drawHeaderBox(marginLeft, currentY, leftColWidth, rowHeight1, "SHIPPER'S NAME & ADDRESS", awbData.shipper.name + "\n" + awbData.shipper.address, "SHIPPER'S ACCOUNT NUMBER", awbData.shipper.account || "",6.5);
 
     // Right - Conditions box
     doc.rect(marginLeft + leftColWidth, currentY, rightColWidth, rowHeight1, "S");
@@ -207,9 +230,41 @@ doc.setFont("helvetica", "normal");
 doc.setFont("helvetica", "bold");
 
 
-    const conditionsText =
-      "Copies 1, 2 and 3 of this Air Waybill are originals and have the same validity.\nIt is agreed that the goods described herein are accepted in apparent good order and condition (except as noted) for carriage SUBJECT TO THE CONDITIONS OF CONTRACT ON THE REVERSE HEREOF. ALL GOODS MAY BE CARRIED BY ANY OTHER MEANS INCLUDING ROAD OR ANY OTHER CARRIER UNLESS SPECIFIC CONTRARY INSTRUCTIONS ARE GIVEN HEREON BY THE SHIPPER. THE SHIPPER'S ATTENTION IS DRAWN TO THE NOTICE CONCERNING CARRIER'S LIMITATION OF LIABILITY.";
-    drawMultilineInBox(marginLeft + leftColWidth + 1.5, currentY + 17.5, rightColWidth - 3, rowHeight1 + 10, conditionsText, 5, 1);
+    const conditionsLine1 =
+  "Copies 1, 2 and 3 of this Air Waybill are originals and have the same validity.";
+
+const conditionsLine2 =
+  "It is agreed that the goods described herein are accepted in apparent good order and condition (except as noted) for carriage SUBJECT TO THE CONDITIONS OF CONTRACT ON THE REVERSE HEREOF. ALL GOODS MAY BE CARRIED BY ANY OTHER MEANS INCLUDING ROAD OR ANY OTHER CARRIER UNLESS SPECIFIC CONTRARY INSTRUCTIONS ARE GIVEN HEREON BY THE SHIPPER, AND SHIPPER AGREES THAT THE SHIPMENT MAY BE CARRIED VIA INTERMEDIATE STOPPING PLACES WHICH THE CARRIER DEEMS APPROPRIATE. THE SHIPPER'S ATTENTION IS DRAWN TO THE NOTICE CONCERNING CARRIER'S LIMITATION OF LIABILITY. Shipper may increase such limitation of liability by declaring a higher value for carriage and paying a supplemental charge if required.";
+doc.setFontSize(5);
+doc.setFont("helvetica", "bold");   // if needed
+doc.text(conditionsLine1, marginLeft + leftColWidth + 1.5, currentY + 23.8);
+
+function drawMultilineWithSpacing(x, y, boxW, boxH, text, fontSize = 6, padding = 1) {
+  doc.setFontSize(fontSize);
+  const maxWidth = boxW - padding * 2;
+  const lines = doc.splitTextToSize(text, maxWidth);
+
+  // ⭐ CUSTOM LINE SPACING FOR THIS PARAGRAPH ONLY
+  const lineHeight = fontSize * 0.46;   // ← increase spacing here
+
+  let ty = y + padding + fontSize;
+  lines.forEach((ln) => {
+    doc.text(ln, x + padding, ty);
+    ty += lineHeight;   // ← apply spacing
+  });
+}
+
+drawMultilineWithSpacing(
+  marginLeft + leftColWidth + 1.5,
+  currentY + 21.0,      // move paragraph slightly lower
+  rightColWidth - 3,
+  rowHeight1 + 10,
+  conditionsLine2,
+  5.5,
+  1
+);
+
+
 
   // reset normal font for next content
 doc.setFont("helvetica", "normal");
@@ -218,8 +273,17 @@ doc.setFont("helvetica", "normal");
     currentY += rowHeight1;
 
     // ------------------ ROW 2: CONSIGNEE & ACCOUNTING ------------------
-    const consigneeText = awbData.consignee.name + "\n" + awbData.consignee.address + "\nTelephone No.: " + awbData.consignee.telephone;
-    drawHeaderBox(marginLeft, currentY, leftColWidth, rowHeight1, "CONSIGNEE'S NAME & ADDRESS", consigneeText, "CONSIGNEE'S ACCOUNT NUMBER", awbData.consignee.account || "");
+    const consigneeText = awbData.consignee.name + "\n" + 
+                      awbData.consignee.address + 
+                      "\nTEL. NO.: " + awbData.consignee.telephone;
+
+drawHeaderBox(marginLeft, currentY, leftColWidth, rowHeight1,
+              "CONSIGNEE'S NAME & ADDRESS",
+              consigneeText,
+              "CONSIGNEE'S ACCOUNT NUMBER",
+              awbData.consignee.account || "",
+              6   // NEW FONT SIZE
+);
 
     doc.rect(marginLeft + leftColWidth, currentY, rightColWidth, rowHeight1, "S");
     doc.setFontSize(5);
@@ -515,11 +579,11 @@ doc.text(
 );
 
 
-    doc.setFontSize(4);
-    const disclaimerText =
-      "Note: Declared Value for Carriage and Declared Value for Customs are required for all shipments. Consult IATA TACT rules or similar publications for details.";
-    const disclaimerX = marginLeft + 108;
-    doc.text(disclaimerText, disclaimerX, hLine2Y + 2, { maxWidth: pageWidth - 109, align: "left" });
+    // doc.setFontSize(4);
+    // const disclaimerText =
+    //   "Note: Declared Value for Carriage and Declared Value for Customs are required for all shipments. Consult IATA TACT rules or similar publications for details.";
+    // const disclaimerX = marginLeft + 108;
+    // doc.text(disclaimerText, disclaimerX, hLine2Y + 2, { maxWidth: pageWidth - 109, align: "left" });
     doc.setFontSize(6);
     currentY += routingRowHeight;
 
@@ -951,7 +1015,7 @@ doc.setFontSize(6);
 doc.text(
   "Signature of Issuing Carrier or Its Agent",
   sigX - 20,
-  sigY + 8
+  sigY + 6.5
 );
 
     // // execution box bottom-left separators
